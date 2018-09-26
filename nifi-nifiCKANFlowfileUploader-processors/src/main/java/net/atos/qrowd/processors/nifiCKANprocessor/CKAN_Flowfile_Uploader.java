@@ -18,8 +18,6 @@
 package net.atos.qrowd.processors.nifiCKANprocessor;
 
 import net.atos.qrowd.handlers.CKAN_API_Handler;
-import org.apache.commons.io.FileUtils;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.nifi.annotation.behavior.ReadsAttribute;
 import org.apache.nifi.annotation.documentation.CapabilityDescription;
 import org.apache.nifi.annotation.documentation.Tags;
@@ -36,11 +34,7 @@ import org.apache.nifi.processor.util.StandardValidators;
 
 import java.nio.file.*;
 import java.io.IOException;
-import java.net.URL;
-import java.nio.file.CopyOption;
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
 import java.util.*;
 
 @Tags({"ckan","web service","request","local"})
@@ -160,7 +154,7 @@ public class CKAN_Flowfile_Uploader extends AbstractProcessor {
 
         final String apiKey = context.getProperty(api_key).getValue();
         final String packageDescription = context.getProperty(package_description).evaluateAttributeExpressions(flowFile).getValue();
-        final Boolean packagePrivate;
+        final boolean packagePrivate;
         packagePrivate = context.getProperty(package_private).getValue().equals("True");
 
         //If the property package_name is not filled, then use the filename (without extension) as package name
@@ -192,7 +186,7 @@ public class CKAN_Flowfile_Uploader extends AbstractProcessor {
         // -- In case of any exception in the process, send the flowfile to FAILURE.
         // *********************
 
-        CKAN_API_Handler ckan_api_handler = new CKAN_API_Handler(url, filenameNoExtension, filename, organizationId, packageDescription, packagePrivate);
+        CKAN_API_Handler ckan_api_handler = new CKAN_API_Handler(url, apiKey, filenameNoExtension, organizationId, packageDescription, packagePrivate);
         try {
             if (!ckan_api_handler.organizationExists()) {
                 ckan_api_handler.createOrganization();
