@@ -61,12 +61,12 @@ public class CKAN_Package_Backup extends AbstractProcessor {
             .sensitive(true)
             .build();
 
-    private static final Relationship REL_SUCCESS = new Relationship.Builder()
-            .name("SUCCESS")
-            .description("Success relationship")
+    private static final Relationship REL_BACKUP_CREATED = new Relationship.Builder()
+            .name("BACKUP_SUCCESS")
+            .description("Package found and backup successful")
             .build();
     private static final Relationship REL_NO_PACKAGE = new Relationship.Builder()
-            .name("no.package.found")
+            .name("NO_PACKAGE_FOUND")
             .description("No package was found with that name")
             .build();
     private static final Relationship REL_FAILURE = new Relationship.Builder()
@@ -88,7 +88,7 @@ public class CKAN_Package_Backup extends AbstractProcessor {
         this.descriptors = Collections.unmodifiableList(descriptors);
 
         final Set<Relationship> relationships = new HashSet<>();
-        relationships.add(REL_SUCCESS);
+        relationships.add(REL_BACKUP_CREATED);
         relationships.add(REL_NO_PACKAGE);
         relationships.add(REL_FAILURE);
         this.relationships = Collections.unmodifiableSet(relationships);
@@ -123,7 +123,7 @@ public class CKAN_Package_Backup extends AbstractProcessor {
         String url = context.getProperty(CKAN_url).getValue();
         final String apiKey = context.getProperty(api_key).getValue();
 
-        /******************
+        /* *****************
          * Main logic of the CKAN package backup:
          *  - Look in CKAN for a package with the same name as the file
          *  - If not found, output flowfile via not_found relationship
@@ -131,11 +131,11 @@ public class CKAN_Package_Backup extends AbstractProcessor {
          *      - Create a new package with the dated name
          *      - Iterate over all the resources, getting the files from the url and upload the to the dated package
          *      - Output flowfile via success so the next processor can update CKAN (do this here?)
-         *********************/
+         ******************** */
 
         CKAN_API_Handler ckan_api_handler = new CKAN_API_Handler(url, apiKey);
         try{
-            getLogger().warn("Getting the information of package with name: {}",new Object[]{filename});
+            getLogger().info("Getting the information of package with name: {}",new Object[]{filename});
             Package_ dataset = ckan_api_handler.getPackageByName(filename);
             //When package cannot be found on CKAN, returns null
             if(dataset!=null)
@@ -150,6 +150,7 @@ public class CKAN_Package_Backup extends AbstractProcessor {
 
                 String datasetName = dataset.getName()+timeStamp;
 
+                getLogger().info("Creating the package: {}", new Object[]{datasetName});
                 //Create the new timestamped package
                 ckan_api_handler.createPackagePojo(dataset,datasetName);
 
@@ -162,12 +163,13 @@ public class CKAN_Package_Backup extends AbstractProcessor {
 
                         String resourceFileName = fileName+timeStamp+"."+fileExtension;
 
+                        getLogger().info("Uploading to dataset: {} the resource: {}",new Object[]{datasetName,resourceFileName});
                         ckan_api_handler.uploadFilePojo(res, datasetName, resourceFileName);
                     }
                 }
 
                 //Transfer the input file through succes relationship
-                session.transfer(flowFile, REL_SUCCESS);
+                session.transfer(flowFile, REL_BACKUP_CREATED);
                 ckan_api_handler.close();
 
             }else
