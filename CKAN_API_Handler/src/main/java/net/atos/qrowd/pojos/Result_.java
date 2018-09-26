@@ -1,5 +1,5 @@
 
-package net.atos.qrowd.processors.pojos;
+package net.atos.qrowd.pojos;
 
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;

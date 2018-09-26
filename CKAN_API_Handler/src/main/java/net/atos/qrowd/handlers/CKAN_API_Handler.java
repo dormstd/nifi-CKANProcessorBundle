@@ -14,13 +14,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package net.atos.qrowd.processors.nifiCKANDatasetBackup;
+package net.atos.qrowd.handlers;
 
 import com.google.gson.Gson;
-import net.atos.qrowd.processors.pojos.CkanFullList;
-import net.atos.qrowd.processors.pojos.Package_;
-import net.atos.qrowd.processors.pojos.Resource;
-import net.atos.qrowd.processors.pojos.ResourceResponse;
+import net.atos.qrowd.pojos.CkanFullList;
+import net.atos.qrowd.pojos.Package_;
+import net.atos.qrowd.pojos.Resource;
+import net.atos.qrowd.pojos.ResourceResponse;
+import org.apache.commons.io.FileUtils;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpPost;
@@ -32,7 +33,6 @@ import org.apache.http.entity.mime.content.StringBody;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.log4j.Logger;
-import org.apache.commons.io.FileUtils;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -53,7 +53,7 @@ public class CKAN_API_Handler {
     private CloseableHttpClient httpclient;
     private Boolean package_private;
 
-    CKAN_API_Handler(String HOST, String api_key, String filename, String organization_id, String package_description, Boolean package_private) {
+    public CKAN_API_Handler(String HOST, String api_key, String filename, String organization_id, String package_description, Boolean package_private) {
         this.HOST = HOST;
         this.api_key = api_key;
         this.package_id = filename.toLowerCase();
@@ -64,7 +64,7 @@ public class CKAN_API_Handler {
         this.httpclient = HttpClientBuilder.create().build();
     }
 
-    CKAN_API_Handler(String HOST, String api_key)
+    public CKAN_API_Handler(String HOST, String api_key)
     {
         this.HOST = HOST;
         this.api_key = api_key;
@@ -347,16 +347,13 @@ public class CKAN_API_Handler {
         return sb.toString();
     }
 
-    public String uploadFilePojo(Resource resource, String dataset_name, String timestamp) throws IOException {
+    public String uploadFilePojo(Resource resource, String dataset_name, String resourceFileName) throws IOException {
         String line;
         StringBuilder sb = new StringBuilder();
 
-        String fileExtension = resource.getName().split("\\.")[1];
-        String fileName = resource.getName().split("\\.")[0];
-
         URL url = new URL(resource.getUrl());
         String tDir = System.getProperty("java.io.tmpdir");
-        String path = tDir + "/"+resource.getKey()+"."+fileExtension;
+        String path = tDir + "/"+resourceFileName;
         File file = new File(path);
         file.deleteOnExit();
         FileUtils.copyURLToFile(url, file);
@@ -367,13 +364,13 @@ public class CKAN_API_Handler {
         HttpEntity reqEntity = MultipartEntityBuilder.create()
                 .addPart("file", cbFile)
                 //Cannot use getKey() because sometimes it is empty and causes error (resource with no filename in it)
-                .addPart("key", new StringBody(fileName,ContentType.TEXT_PLAIN))
-                .addPart("name", new StringBody(fileName+timestamp+"."+fileExtension,ContentType.TEXT_PLAIN))
+                .addPart("key", new StringBody(resourceFileName.split("\\.")[0],ContentType.TEXT_PLAIN))
+                .addPart("name", new StringBody(resourceFileName,ContentType.TEXT_PLAIN))
                 .addPart("url",new StringBody(resource.getUrl(),ContentType.TEXT_PLAIN))
                 .addPart("package_id",new StringBody(dataset_name,ContentType.TEXT_PLAIN))
                 .addPart("format",new StringBody(resource.getFormat(),ContentType.TEXT_PLAIN))
                 .addPart("upload",cbFile)
-                .addPart("description",new StringBody(file.getName()+" Backuped on: "+timestamp,ContentType.TEXT_PLAIN))
+                .addPart("description",new StringBody(resource.getDescription(),ContentType.TEXT_PLAIN))
                 .build();
 
         postRequest = new HttpPost(HOST+"/api/action/resource_create");

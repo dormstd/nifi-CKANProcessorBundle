@@ -17,29 +17,23 @@
 
 package net.atos.qrowd.processors.nifiCKANDatasetBackup;
 
-import net.atos.qrowd.processors.pojos.Package_;
-import net.atos.qrowd.processors.pojos.Resource;
-import org.apache.commons.lang3.StringUtils;
+import net.atos.qrowd.pojos.Package_;
+import net.atos.qrowd.pojos.Resource;
 import org.apache.nifi.annotation.behavior.EventDriven;
 import org.apache.nifi.annotation.behavior.ReadsAttribute;
 import org.apache.nifi.annotation.behavior.SupportsBatching;
 import org.apache.nifi.annotation.documentation.CapabilityDescription;
 import org.apache.nifi.annotation.documentation.Tags;
 import org.apache.nifi.annotation.lifecycle.OnScheduled;
-import org.apache.nifi.components.AllowableValue;
 import org.apache.nifi.components.PropertyDescriptor;
-import org.apache.nifi.components.Validator;
 import org.apache.nifi.flowfile.FlowFile;
 import org.apache.nifi.flowfile.attributes.CoreAttributes;
 import org.apache.nifi.logging.LogLevel;
 import org.apache.nifi.processor.*;
 import org.apache.nifi.processor.exception.ProcessException;
 import org.apache.nifi.processor.util.StandardValidators;
-
-import java.io.File;
+import net.atos.qrowd.handlers.CKAN_API_Handler;
 import java.io.IOException;
-import java.net.URISyntaxException;
-import java.nio.file.*;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -78,7 +72,7 @@ public class CKAN_Package_Backup extends AbstractProcessor {
     private static final Relationship REL_FAILURE = new Relationship.Builder()
             .name("failure")
             .description(
-                    "Any FlowFile that could not be fetched from the file system for any reason other than insufficient permissions or the file not existing will be transferred to this Relationship.")
+                    "Any flowfile that causes an error using the CKAN API or any exception in the processor")
             .build();
 
     private List<PropertyDescriptor> descriptors;
@@ -137,8 +131,6 @@ public class CKAN_Package_Backup extends AbstractProcessor {
          *      - Create a new package with the dated name
          *      - Iterate over all the resources, getting the files from the url and upload the to the dated package
          *      - Output flowfile via success so the next processor can update CKAN (do this here?)
-
-
          *********************/
 
         CKAN_API_Handler ckan_api_handler = new CKAN_API_Handler(url, apiKey);
@@ -161,14 +153,22 @@ public class CKAN_Package_Backup extends AbstractProcessor {
                 //Create the new timestamped package
                 ckan_api_handler.createPackagePojo(dataset,datasetName);
 
-                //For each resource, create a timestamped backup in the previuos package
-                for(Resource res: resourceList)
-                {
-                    ckan_api_handler.uploadFilePojo(res,datasetName,timeStamp);
+                //Check when the list of resources of the package is empty
+                if(resourceList.size()>0) {
+                    //For each resource, create a timestamped backup in the previous package
+                    for (Resource res : resourceList) {
+                        String fileExtension = res.getName().split("\\.")[1];
+                        String fileName = res.getName().split("\\.")[0];
+
+                        String resourceFileName = fileName+timeStamp+"."+fileExtension;
+
+                        ckan_api_handler.uploadFilePojo(res, datasetName, resourceFileName);
+                    }
                 }
 
                 //Transfer the input file through succes relationship
                 session.transfer(flowFile, REL_SUCCESS);
+                ckan_api_handler.close();
 
             }else
             {
@@ -180,10 +180,12 @@ public class CKAN_Package_Backup extends AbstractProcessor {
             getLogger().log(LogLevel.ERROR, "Error while using the CKAN API");
             getLogger().error(ioe.toString());
             session.transfer(session.penalize(flowFile), REL_FAILURE);
+        }catch(ArrayIndexOutOfBoundsException oob)
+        {
+            getLogger().log(LogLevel.ERROR, "Error while splitting the resource filename, it contains no '.'");
+            getLogger().error(oob.toString());
+            session.transfer(session.penalize(flowFile), REL_FAILURE);
         }
-
-        // It is critical that we commit the session before we perform the Delete. Otherwise, we could have a case where we
-        // ingest the file, delete it, and then NiFi is restarted before the session is committed. That would result in data loss.
         // As long as we commit the session right here, we are safe.
         session.commit();
     }

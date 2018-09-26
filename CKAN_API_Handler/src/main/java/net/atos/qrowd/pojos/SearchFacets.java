@@ -1,5 +1,5 @@
 
-package net.atos.qrowd.processors.pojos;
+package net.atos.qrowd.pojos;
 
 import org.apache.commons.lang3.builder.ToStringBuilder;
 

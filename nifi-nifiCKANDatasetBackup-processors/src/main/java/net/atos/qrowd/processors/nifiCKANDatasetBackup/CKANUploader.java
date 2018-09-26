@@ -1,6 +1,7 @@
 package net.atos.qrowd.processors.nifiCKANDatasetBackup;
 
-import net.atos.qrowd.processors.pojos.Package_;
+import net.atos.qrowd.handlers.CKAN_API_Handler;
+import net.atos.qrowd.pojos.Package_;
 
 import java.io.IOException;
 

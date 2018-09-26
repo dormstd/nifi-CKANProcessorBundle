@@ -22,7 +22,7 @@
         <version>1.0-SNAPSHOT</version>
     </parent>
 
-    <artifactId>nifi-nifiCKANDatasetBackup-nar</artifactId>
+    <artifactId>nifi-nifiCKANFlowfileUploader-nar</artifactId>
     <version>1.0-SNAPSHOT</version>
     <packaging>nar</packaging>
     <properties>
@@ -33,7 +33,7 @@
     <dependencies>
         <dependency>
             <groupId>net.atos.qrowd</groupId>
-            <artifactId>nifi-nifiCKANDatasetBackup-processors</artifactId>
+            <artifactId>nifi-nifiCKANFlowfileUploader-processors</artifactId>
             <version>1.0-SNAPSHOT</version>
         </dependency>
     </dependencies>
