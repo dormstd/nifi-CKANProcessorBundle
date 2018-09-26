@@ -68,6 +68,7 @@ public class CKAN_API_Handler {
     {
         this.HOST = HOST;
         this.api_key = api_key;
+
         this.httpclient = HttpClientBuilder.create().build();
     }
 
@@ -176,6 +177,7 @@ public class CKAN_API_Handler {
         //ToDo: Save the returned package to store it's alfanumerical id (to be later used when updating the file)
         if(statusCode!=200){
             log.error("statusCode =!=" +statusCode);
+            log.error("Error creating the package via CKAN API. Package id: "+package_id);
             log.error(sb);
         }
         else {
@@ -189,18 +191,32 @@ public class CKAN_API_Handler {
         StringBuilder sb = new StringBuilder();
         String line;
 
+        MultipartEntityBuilder multipart = MultipartEntityBuilder.create()
+                .addPart("name",new StringBody(name,ContentType.TEXT_PLAIN));
+        // ToDo: Improve this way of handling null values in the returned dataset
+                if(dataset.getAuthor()!=null) {
+                    multipart.addPart("author", new StringBody(dataset.getAuthor(), ContentType.TEXT_PLAIN));
+                }
+                if(dataset.getAuthorEmail()!=null) {
+                    multipart.addPart("author_email", new StringBody(dataset.getAuthorEmail(), ContentType.TEXT_PLAIN));
+                }
+                if(dataset.getOwnerOrg()!=null) {
+                    multipart.addPart("owner_org", new StringBody(dataset.getOwnerOrg(), ContentType.TEXT_PLAIN));
+                }
+                if(dataset.getNotes()!=null) {
+                    multipart.addPart("notes", new StringBody(dataset.getNotes(), ContentType.TEXT_PLAIN));
+                }
+                if(dataset.getPrivate()!=null) {
+                    multipart.addPart("private", new StringBody(dataset.getPrivate().toString(), ContentType.TEXT_PLAIN));
+                }
+                if(dataset.getLicenseTitle()!=null) {
+                    multipart.addPart("license_title", new StringBody(dataset.getLicenseTitle(), ContentType.TEXT_PLAIN));
+                }
+                if(dataset.getLicenseId()!=null) {
+                    multipart.addPart("license_id", new StringBody(dataset.getLicenseId(), ContentType.TEXT_PLAIN));
+                }
 
-
-        HttpEntity reqEntity = MultipartEntityBuilder.create()
-                .addPart("name",new StringBody(name,ContentType.TEXT_PLAIN))
-                .addPart("author",new StringBody(dataset.getAuthor(),ContentType.TEXT_PLAIN))
-                .addPart("author_email",new StringBody(dataset.getAuthorEmail(),ContentType.TEXT_PLAIN))
-                .addPart("owner_org",new StringBody(dataset.getOwnerOrg(),ContentType.TEXT_PLAIN))
-                .addPart("notes",new StringBody(dataset.getNotes(),ContentType.TEXT_PLAIN))
-                .addPart("private",new StringBody(dataset.getPrivate().toString(),ContentType.TEXT_PLAIN))
-                .addPart("license_title",new StringBody(dataset.getLicenseTitle(),ContentType.TEXT_PLAIN))
-                .addPart("license_id",new StringBody(dataset.getLicenseId(),ContentType.TEXT_PLAIN))
-                .build();
+        HttpEntity reqEntity = multipart.build();
 
         postRequest = new HttpPost(HOST+"/api/action/package_create");
         postRequest.setEntity(reqEntity);
