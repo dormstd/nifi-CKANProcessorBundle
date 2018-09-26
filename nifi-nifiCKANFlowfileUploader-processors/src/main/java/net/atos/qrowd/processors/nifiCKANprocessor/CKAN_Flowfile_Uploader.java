@@ -142,6 +142,10 @@ public class CKAN_Flowfile_Uploader extends AbstractProcessor {
     @Override
     public void onTrigger(final ProcessContext context, final ProcessSession session) throws ProcessException {
         FlowFile flowFile = session.get();
+
+        if (flowFile == null) {
+            return;
+        }
         //This is the way to get the value of a property
         String url = context.getProperty(CKAN_url).getValue();
 
@@ -170,10 +174,6 @@ public class CKAN_Flowfile_Uploader extends AbstractProcessor {
             filenameNoExtension=getFileName(filename);
         }
         final String organizationId = context.getProperty(organization_id).getValue();
-
-        if (flowFile == null) {
-            return;
-        }
 
         //  *******************
         //   Main logic of the CKAN uploader
