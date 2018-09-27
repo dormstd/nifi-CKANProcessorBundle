@@ -111,7 +111,7 @@ public class CKAN_API_Handler {
             return false;
         }
     }
-    public boolean packageExists(String id) throws IOException{
+    /*public boolean packageExists(String id) throws IOException{
 
         String line;
         StringBuilder sb = new StringBuilder();
@@ -147,7 +147,7 @@ public class CKAN_API_Handler {
             log.warn(sb);
             return false;
         }
-    }
+    }*/
 
     public Package_ getPackageByName(String name) throws IOException {
         HttpPost postRequest;
@@ -427,10 +427,11 @@ public class CKAN_API_Handler {
             //if the count is 1, get all the needed data to update the resource
         }else if(resResponse.getResult().getCount()==1)
         {
+            String resource_packageId = resResponse.getResult().getResults().get(0).getPackageId();
             String id = resResponse.getResult().getResults().get(0).getId();
 
             //This is needed to check that the resource belongs to the current package
-            Package_ foundPackage = getPackageById(id);
+            Package_ foundPackage = getPackageByName(package_id);
             String foundPackageId = "Not_found";
             if(foundPackage!=null)
             {
@@ -438,17 +439,20 @@ public class CKAN_API_Handler {
             }
 
             //If the resource's package_id is the same as the current package id (search for package by name and get the id)
-            if( foundPackage != null && package_id.equals(foundPackageId)) {
+            if( foundPackage != null && resource_packageId.equals(foundPackageId)) {
                 log.info("Resource found, updating it");
                 updateFile(path, id);
                 return true;
             }else{
-                //If no package is found or the package is different than the current one
-                log.error("The found resource does not belong to the same package we are expecting");
-                log.error("Package id found:"+foundPackageId+". Package expected:"+package_id);
-                return false;
+                //If no package is found(cannot happen because the resource must belong to a package) or the package is different than the current one
+                log.warn("The found resource does not belong to the same package we are expecting");
+                log.warn("Package id found:"+foundPackageId+". Package expected:"+resource_packageId);
+                log.warn("Creating the resource in the found package");
+                uploadFile(path);
+                return true;
             }
         }else{
+            //ToDo: If more than one resource is found with that name, check if there is one in the current package and update it.
             log.error("Found more than one resource with that name. Cancel update...");
             return false;
         }
@@ -519,42 +523,6 @@ public class CKAN_API_Handler {
         else log.info("Request returns statusCode 200: OK");
     }
 
-    private Package_ getPackageById(String id) throws IOException {
-        HttpPost postRequest;
-        StringBuilder sb = new StringBuilder();
-        String line;
-
-        Gson gson = new Gson();
-
-        //query the API to get the resources with that file name
-        postRequest = new HttpPost(HOST+"/api/3/action/package_search?q=id:"+id);
-        postRequest.setHeader("X-CKAN-API-Key", api_key);
-
-        HttpResponse response = httpclient.execute(postRequest);
-        int statusCode = response.getStatusLine().getStatusCode();
-        BufferedReader br = new BufferedReader(
-                new InputStreamReader((response.getEntity().getContent())));
-        while ((line = br.readLine()) != null) {
-            sb.append(line);
-        }
-        // Parse the response into a POJO to be able to get results from it.
-        // ToDo: If no result is returned, raise an error (when converting to POJO fails or return code !=200?)
-        if(statusCode==200) {
-            CkanFullList CkanFullList = gson.fromJson(sb.toString(), CkanFullList.class);
-            //by default we get the first package_ of the list of packages
-            if (CkanFullList.getPackage().getPackages().size() == 1) {
-                log.info("Package: "+id+" was found in CKAN.");
-                return CkanFullList.getPackage().getPackages().get(0);
-            } else {
-                log.warn("Package: "+id+" not found");
-                //ToDo: Null, really?
-                return null;
-            }
-        }else{
-            return null; //........
-        }
-
-    }
 
     public void close()
     {
