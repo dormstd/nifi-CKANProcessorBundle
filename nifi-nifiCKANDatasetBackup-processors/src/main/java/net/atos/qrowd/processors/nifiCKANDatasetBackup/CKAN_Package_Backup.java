@@ -17,6 +17,7 @@
 
 package net.atos.qrowd.processors.nifiCKANDatasetBackup;
 
+import net.atos.qrowd.handlers.CKAN_API_Handler;
 import net.atos.qrowd.pojos.Package_;
 import net.atos.qrowd.pojos.Resource;
 import org.apache.nifi.annotation.behavior.EventDriven;
@@ -32,7 +33,7 @@ import org.apache.nifi.logging.LogLevel;
 import org.apache.nifi.processor.*;
 import org.apache.nifi.processor.exception.ProcessException;
 import org.apache.nifi.processor.util.StandardValidators;
-import net.atos.qrowd.handlers.CKAN_API_Handler;
+
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;

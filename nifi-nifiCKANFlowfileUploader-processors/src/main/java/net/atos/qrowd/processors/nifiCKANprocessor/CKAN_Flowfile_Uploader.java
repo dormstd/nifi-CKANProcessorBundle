@@ -19,9 +19,9 @@ package net.atos.qrowd.processors.nifiCKANprocessor;
 
 import net.atos.qrowd.handlers.CKAN_API_Handler;
 import org.apache.nifi.annotation.behavior.ReadsAttribute;
+import org.apache.nifi.annotation.behavior.ReadsAttributes;
 import org.apache.nifi.annotation.documentation.CapabilityDescription;
 import org.apache.nifi.annotation.documentation.Tags;
-import org.apache.nifi.annotation.lifecycle.OnScheduled;
 import org.apache.nifi.components.AllowableValue;
 import org.apache.nifi.components.PropertyDescriptor;
 import org.apache.nifi.components.Validator;
@@ -32,14 +32,17 @@ import org.apache.nifi.processor.*;
 import org.apache.nifi.processor.exception.ProcessException;
 import org.apache.nifi.processor.util.StandardValidators;
 
-import java.nio.file.*;
 import java.io.IOException;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.*;
 
 @Tags({"ckan","web service","request","local"})
 @CapabilityDescription("Nifi Processor that will upload the specified flowfile to CKAN through its API, it will create the organization and package if needed.")
-@ReadsAttribute(attribute = "filename", description = "The filename to use when writing the FlowFile to disk.")
+@ReadsAttributes
+({@ReadsAttribute(attribute = "filename", description = "The filename to use when writing the FlowFile to disk."),
+@ReadsAttribute(attribute = "ckan_package_name", description= "The name of the CKAN package to store the flowfile into")}
+)
 public class CKAN_Flowfile_Uploader extends AbstractProcessor {
 
     private static final AllowableValue PRIVATE_TRUE = new AllowableValue("True", "Private", "Marks the package as private");
@@ -134,10 +137,6 @@ public class CKAN_Flowfile_Uploader extends AbstractProcessor {
         return descriptors;
     }
 
-    @OnScheduled
-    public void onScheduled(final ProcessContext context) {
-
-    }
 
     @Override
     public void onTrigger(final ProcessContext context, final ProcessSession session) throws ProcessException {
@@ -161,17 +160,29 @@ public class CKAN_Flowfile_Uploader extends AbstractProcessor {
         final boolean packagePrivate;
         packagePrivate = context.getProperty(package_private).getValue().equals("True");
 
+
+        String datasetName = flowFile.getAttribute("ckan_package_name");
+
         //If the property package_name is not filled, then use the filename (without extension) as package name
-        //ToDo: Fix an error, the processos throws null pointer when package_name property is empty
+        //ToDo: Fix an error, the processor throws null pointer when package_name property is empty
         String filenameNoExtension = "";
-        if(context.getProperty(package_name).isSet())
+
+        // We can either use the attribute, the property or the filename as package name
+        // The order of priority should be property -> attribute -> filename
+        if(datasetName != null && datasetName.length()>0)
+        {
+            filenameNoExtension = datasetName;
+            getLogger().info("Dataset name got from attribute: "+filenameNoExtension);
+        }else if(context.getProperty(package_name).isSet())
         {
             filenameNoExtension =context.getProperty(package_name).getValue();
+            getLogger().info("Dataset name got from processor property: "+filenameNoExtension);
         }
         //Check if the property is filled with spaces, empty, or null to use the file name as filename
         if(filenameNoExtension == null || filenameNoExtension.isEmpty() || filenameNoExtension.trim().length()==0)
         {
             filenameNoExtension=getFileName(filename);
+            getLogger().info("Dataset name got from filename: "+filenameNoExtension);
         }
         final String organizationId = context.getProperty(organization_id).getValue();
 
