@@ -185,42 +185,7 @@ public class CKAN_API_Handler {
         }
 
     }
-    public Package_ getPackageById(String id) throws IOException {
-        HttpPost postRequest;
-        StringBuilder sb = new StringBuilder();
-        String line;
 
-        Gson gson = new Gson();
-
-        //query the API to get the resources with that file name
-        postRequest = new HttpPost(HOST+"/api/3/action/package_search?q=id:"+id);
-        postRequest.setHeader("X-CKAN-API-Key", api_key);
-
-        HttpResponse response = httpclient.execute(postRequest);
-        int statusCode = response.getStatusLine().getStatusCode();
-        BufferedReader br = new BufferedReader(
-                new InputStreamReader((response.getEntity().getContent())));
-        while ((line = br.readLine()) != null) {
-            sb.append(line);
-        }
-        // Parse the response into a POJO to be able to get results from it.
-        // ToDo: If no result is returned, raise an error (when converting to POJO fails or return code !=200?)
-        if(statusCode==200) {
-            CkanFullList CkanFullList = gson.fromJson(sb.toString(), CkanFullList.class);
-            //by default we get the first package_ of the list of packages
-            if (CkanFullList.getPackage().getPackages().size() == 1) {
-                log.info("Package: "+id+" was found in CKAN.");
-                return CkanFullList.getPackage().getPackages().get(0);
-            } else {
-                log.warn("Package: "+id+" not found");
-                //ToDo: Null, really?
-                return null;
-            }
-        }else{
-            return null; //........
-        }
-
-    }
     public void createPackage() throws IOException{
 
         HttpPost postRequest;
@@ -460,21 +425,27 @@ public class CKAN_API_Handler {
             uploadFile(path);
             return true;
             //if the count is 1, get all the needed data to update the resource
-            //ToDo: Check that the resource we find is in the same package as we expect (to prevent updating a resource in another package)
         }else if(resResponse.getResult().getCount()==1)
         {
             String id = resResponse.getResult().getResults().get(0).getId();
+
+            //This is needed to check that the resource belongs to the current package
             Package_ foundPackage = getPackageById(id);
-            if(package_id.equals(foundPackage.getId())) {
-                //ToDo: Check if the resource belongs to the same package
-                //result_package_id is the id, package_id is the name of the package: How to get the alfanumeric ID?
-                //if(result_package_id.equals(package_id)) {
+            String foundPackageId = "Not_found";
+            if(foundPackage!=null)
+            {
+                foundPackageId = foundPackage.getId();
+            }
+
+            //If the resource's package_id is the same as the current package id (search for package by name and get the id)
+            if( foundPackage != null && package_id.equals(foundPackageId)) {
                 log.info("Resource found, updating it");
                 updateFile(path, id);
                 return true;
             }else{
+                //If no package is found or the package is different than the current one
                 log.error("The found resource does not belong to the same package we are expecting");
-                log.error("Package id found:"+foundPackage.getId()+". Package expected:"+package_id);
+                log.error("Package id found:"+foundPackageId+". Package expected:"+package_id);
                 return false;
             }
         }else{
@@ -546,6 +517,43 @@ public class CKAN_API_Handler {
             log.error("statusCode =!=" +statusCode);
         }
         else log.info("Request returns statusCode 200: OK");
+    }
+
+    private Package_ getPackageById(String id) throws IOException {
+        HttpPost postRequest;
+        StringBuilder sb = new StringBuilder();
+        String line;
+
+        Gson gson = new Gson();
+
+        //query the API to get the resources with that file name
+        postRequest = new HttpPost(HOST+"/api/3/action/package_search?q=id:"+id);
+        postRequest.setHeader("X-CKAN-API-Key", api_key);
+
+        HttpResponse response = httpclient.execute(postRequest);
+        int statusCode = response.getStatusLine().getStatusCode();
+        BufferedReader br = new BufferedReader(
+                new InputStreamReader((response.getEntity().getContent())));
+        while ((line = br.readLine()) != null) {
+            sb.append(line);
+        }
+        // Parse the response into a POJO to be able to get results from it.
+        // ToDo: If no result is returned, raise an error (when converting to POJO fails or return code !=200?)
+        if(statusCode==200) {
+            CkanFullList CkanFullList = gson.fromJson(sb.toString(), CkanFullList.class);
+            //by default we get the first package_ of the list of packages
+            if (CkanFullList.getPackage().getPackages().size() == 1) {
+                log.info("Package: "+id+" was found in CKAN.");
+                return CkanFullList.getPackage().getPackages().get(0);
+            } else {
+                log.warn("Package: "+id+" not found");
+                //ToDo: Null, really?
+                return null;
+            }
+        }else{
+            return null; //........
+        }
+
     }
 
     public void close()
