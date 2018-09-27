@@ -32,6 +32,7 @@ import org.apache.http.entity.mime.content.FileBody;
 import org.apache.http.entity.mime.content.StringBody;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
+import org.apache.http.util.EntityUtils;
 import org.apache.log4j.Logger;
 
 import java.io.BufferedReader;
@@ -110,9 +111,45 @@ public class CKAN_API_Handler {
             return false;
         }
     }
+    public boolean packageExists(String id) throws IOException{
 
-    public Package_ getPackageByName(String name) throws IOException
-    {
+        String line;
+        StringBuilder sb = new StringBuilder();
+        HttpPost postRequest;
+
+        HttpEntity reqEntity = MultipartEntityBuilder.create()
+                .addPart("id",new StringBody(id,ContentType.TEXT_PLAIN))
+                .build();
+
+        postRequest = new HttpPost(HOST+"/api/action/package_show");
+        postRequest.setEntity(reqEntity);
+        postRequest.setHeader("X-CKAN-API-Key", api_key);
+
+        HttpResponse response = httpclient.execute(postRequest);
+        int statusCode = response.getStatusLine().getStatusCode();
+
+        BufferedReader br = new BufferedReader(
+                new InputStreamReader((response.getEntity().getContent())));
+        while ((line = br.readLine()) != null) {
+            sb.append(line);
+            sb.append("\n");
+        }
+
+        if(statusCode==200)
+        {
+            log.info("Package with id "+id+" exists");
+            //Check if that package is deleted
+
+            log.info(sb);
+            return true;
+        }else{
+            log.warn("Package with id "+id+" not found");
+            log.warn(sb);
+            return false;
+        }
+    }
+
+    public Package_ getPackageByName(String name) throws IOException {
         HttpPost postRequest;
         StringBuilder sb = new StringBuilder();
         String line;
@@ -120,7 +157,7 @@ public class CKAN_API_Handler {
         Gson gson = new Gson();
 
         //query the API to get the resources with that file name
-        postRequest = new HttpPost(HOST+"/api/3/action/package_search?q="+name);
+        postRequest = new HttpPost(HOST+"/api/3/action/package_search?q=name:"+name);
         postRequest.setHeader("X-CKAN-API-Key", api_key);
 
         HttpResponse response = httpclient.execute(postRequest);
@@ -136,8 +173,46 @@ public class CKAN_API_Handler {
             CkanFullList CkanFullList = gson.fromJson(sb.toString(), CkanFullList.class);
             //by default we get the first package_ of the list of packages
             if (CkanFullList.getPackage().getPackages().size() == 1) {
+                log.info("Package: "+name+" was found in CKAN.");
                 return CkanFullList.getPackage().getPackages().get(0);
             } else {
+                log.warn("Package: "+name+" not found");
+                //ToDo: Null, really?
+                return null;
+            }
+        }else{
+            return null; //........
+        }
+
+    }
+    public Package_ getPackageById(String id) throws IOException {
+        HttpPost postRequest;
+        StringBuilder sb = new StringBuilder();
+        String line;
+
+        Gson gson = new Gson();
+
+        //query the API to get the resources with that file name
+        postRequest = new HttpPost(HOST+"/api/3/action/package_search?q=id:"+id);
+        postRequest.setHeader("X-CKAN-API-Key", api_key);
+
+        HttpResponse response = httpclient.execute(postRequest);
+        int statusCode = response.getStatusLine().getStatusCode();
+        BufferedReader br = new BufferedReader(
+                new InputStreamReader((response.getEntity().getContent())));
+        while ((line = br.readLine()) != null) {
+            sb.append(line);
+        }
+        // Parse the response into a POJO to be able to get results from it.
+        // ToDo: If no result is returned, raise an error (when converting to POJO fails or return code !=200?)
+        if(statusCode==200) {
+            CkanFullList CkanFullList = gson.fromJson(sb.toString(), CkanFullList.class);
+            //by default we get the first package_ of the list of packages
+            if (CkanFullList.getPackage().getPackages().size() == 1) {
+                log.info("Package: "+id+" was found in CKAN.");
+                return CkanFullList.getPackage().getPackages().get(0);
+            } else {
+                log.warn("Package: "+id+" not found");
                 //ToDo: Null, really?
                 return null;
             }
@@ -159,12 +234,15 @@ public class CKAN_API_Handler {
                 .addPart("private",new StringBody(package_private.toString(),ContentType.TEXT_PLAIN))
                 .build();
 
-        postRequest = new HttpPost(HOST+"/api/action/package_create");
+        postRequest = new HttpPost(HOST+"/api/3/action/package_create?use_default_schema=true");
         postRequest.setEntity(reqEntity);
         postRequest.setHeader("X-CKAN-API-Key", api_key);
 
         HttpResponse response = httpclient.execute(postRequest);
         int statusCode = response.getStatusLine().getStatusCode();
+
+        String message = EntityUtils.toString(response.getEntity());
+        log.warn("***** Response: "+message);
 
         BufferedReader br = new BufferedReader(
                 new InputStreamReader((response.getEntity().getContent())));
@@ -314,58 +392,7 @@ public class CKAN_API_Handler {
         }
     }
 
-    /**
-     * Function that uploads a file to CKAN through it's API
-     * @param path Local filesystem path of the file to upload
-     * @return
-     */
-    public String uploadFile(String path) throws IOException {
-        String line;
-        StringBuilder sb = new StringBuilder();
-        File file = new File(path);
-        SimpleDateFormat dateFormatGmt = new SimpleDateFormat("yyyyMMdd_HHmmss");
-        String date=dateFormatGmt.format(new Date());
-
-        HttpPost postRequest;
-        ContentBody cbFile = new FileBody(file, ContentType.TEXT_HTML);
-        HttpEntity reqEntity = MultipartEntityBuilder.create()
-                .addPart("file", cbFile)
-                .addPart("key", new StringBody(file.getName().split("\\.")[0],ContentType.TEXT_PLAIN))
-                .addPart("name", new StringBody(file.getName(),ContentType.TEXT_PLAIN))
-                .addPart("url",new StringBody("testURL",ContentType.TEXT_PLAIN))
-                .addPart("package_id",new StringBody(package_id,ContentType.TEXT_PLAIN))
-                .addPart("upload",cbFile)
-                .addPart("description",new StringBody(file.getName()+" created on: "+date,ContentType.TEXT_PLAIN))
-                .build();
-
-        postRequest = new HttpPost(HOST+"/api/action/resource_create");
-        postRequest.setEntity(reqEntity);
-        postRequest.setHeader("X-CKAN-API-Key", api_key);
-
-        HttpResponse response = httpclient.execute(postRequest);
-        int statusCode = response.getStatusLine().getStatusCode();
-        BufferedReader br = new BufferedReader(
-                new InputStreamReader((response.getEntity().getContent())));
-
-        sb.append(statusCode);
-        sb.append("\n");
-        if(statusCode!=200){
-            log.error("statusCode =!=" +statusCode);
-        }
-        else log.info("Request returns statusCode 200: OK");
-
-        while ((line = br.readLine()) != null) {
-            sb.append(line);
-            sb.append("\n");
-            System.out.println("+"+line);
-        }
-
-        return sb.toString();
-    }
-
-    public String uploadFilePojo(Resource resource, String dataset_name, String resourceFileName) throws IOException {
-        String line;
-        StringBuilder sb = new StringBuilder();
+    public void uploadFilePojo(Resource resource, String dataset_name, String resourceFileName) throws IOException {
 
         URL url = new URL(resource.getUrl());
         String tDir = System.getProperty("java.io.tmpdir");
@@ -377,6 +404,7 @@ public class CKAN_API_Handler {
 
         HttpPost postRequest;
         ContentBody cbFile = new FileBody(file, ContentType.TEXT_HTML);
+        //ToDo: Handle error when any of the attributes of the resource is null as in the package
         HttpEntity reqEntity = MultipartEntityBuilder.create()
                 .addPart("file", cbFile)
                 //Cannot use getKey() because sometimes it is empty and causes error (resource with no filename in it)
@@ -395,68 +423,11 @@ public class CKAN_API_Handler {
 
         HttpResponse response = httpclient.execute(postRequest);
         int statusCode = response.getStatusLine().getStatusCode();
-        BufferedReader br = new BufferedReader(
-                new InputStreamReader((response.getEntity().getContent())));
 
-        sb.append(statusCode);
-        sb.append("\n");
         if(statusCode!=200){
             log.error("statusCode =!=" +statusCode);
         }
         else log.info("Request returns statusCode 200: OK");
-
-        while ((line = br.readLine()) != null) {
-            sb.append(line);
-            sb.append("\n");
-            System.out.println("+"+line);
-        }
-
-        return sb.toString();
-    }
-
-    public String updateFile(String path, String resourceId) throws IOException {
-        String line;
-        StringBuilder sb = new StringBuilder();
-        File file = new File(path);
-        SimpleDateFormat dateFormatGmt = new SimpleDateFormat("yyyyMMdd_HHmmss");
-        String date=dateFormatGmt.format(new Date());
-
-        HttpPost postRequest;
-        ContentBody cbFile = new FileBody(file, ContentType.TEXT_HTML);
-        HttpEntity reqEntity = MultipartEntityBuilder.create()
-                .addPart("id",new StringBody(resourceId,ContentType.TEXT_PLAIN))
-                .addPart("file", cbFile)
-                .addPart("key", new StringBody(file.getName().split("\\.")[0],ContentType.TEXT_PLAIN))
-                .addPart("name", new StringBody(file.getName(),ContentType.TEXT_PLAIN))
-                .addPart("url",new StringBody("testURL",ContentType.TEXT_PLAIN))
-                .addPart("package_id",new StringBody(package_id,ContentType.TEXT_PLAIN))
-                .addPart("upload",cbFile)
-                .addPart("description",new StringBody(file.getName()+" created on: "+date,ContentType.TEXT_PLAIN))
-                .build();
-
-        postRequest = new HttpPost(HOST+"/api/action/resource_update");
-        postRequest.setEntity(reqEntity);
-        postRequest.setHeader("X-CKAN-API-Key", api_key);
-
-        HttpResponse response = httpclient.execute(postRequest);
-        int statusCode = response.getStatusLine().getStatusCode();
-        BufferedReader br = new BufferedReader(
-                new InputStreamReader((response.getEntity().getContent())));
-
-        sb.append(statusCode);
-        sb.append("\n");
-        if(statusCode!=200){
-            log.error("statusCode =!=" +statusCode);
-        }
-        else log.info("Request returns statusCode 200: OK");
-
-        while ((line = br.readLine()) != null) {
-            sb.append(line);
-            sb.append("\n");
-            System.out.println("+"+line);
-        }
-
-        return sb.toString();
     }
 
     public Boolean createOrUpdateResource(String path) throws IOException {
@@ -488,30 +459,102 @@ public class CKAN_API_Handler {
             log.info("No resource found under that name, creating it...");
             uploadFile(path);
             return true;
-        //if the count is 1, get all the needed data to update the resource
+            //if the count is 1, get all the needed data to update the resource
+            //ToDo: Check that the resource we find is in the same package as we expect (to prevent updating a resource in another package)
         }else if(resResponse.getResult().getCount()==1)
         {
             String id = resResponse.getResult().getResults().get(0).getId();
-            String result_package_id = resResponse.getResult().getResults().get(0).getPackageId();
-            //ToDo: Check if the resource belongs to the same package
-            //result_package_id is the id, package_id is the name of the package: How to get the alfanumeric ID?
-            //if(result_package_id.equals(package_id)) {
+            Package_ foundPackage = getPackageById(id);
+            if(package_id.equals(foundPackage.getId())) {
+                //ToDo: Check if the resource belongs to the same package
+                //result_package_id is the id, package_id is the name of the package: How to get the alfanumeric ID?
+                //if(result_package_id.equals(package_id)) {
                 log.info("Resource found, updating it");
                 updateFile(path, id);
                 return true;
-            /**}else{
+            }else{
                 log.error("The found resource does not belong to the same package we are expecting");
-                log.error("Package id found:"+result_package_id+". Package expected:"+package_id);
+                log.error("Package id found:"+foundPackage.getId()+". Package expected:"+package_id);
                 return false;
-            }*/
+            }
         }else{
             log.error("Found more than one resource with that name. Cancel update...");
             return false;
         }
     }
 
+    private void updateFile(String path, String resourceId) throws IOException {
+        File file = new File(path);
+        SimpleDateFormat dateFormatGmt = new SimpleDateFormat("yyyyMMdd_HHmmss");
+        String date=dateFormatGmt.format(new Date());
+
+        HttpPost postRequest;
+        ContentBody cbFile = new FileBody(file, ContentType.TEXT_HTML);
+        HttpEntity reqEntity = MultipartEntityBuilder.create()
+                .addPart("id",new StringBody(resourceId,ContentType.TEXT_PLAIN))
+                .addPart("file", cbFile)
+                .addPart("key", new StringBody(file.getName().split("\\.")[0],ContentType.TEXT_PLAIN))
+                .addPart("name", new StringBody(file.getName(),ContentType.TEXT_PLAIN))
+                .addPart("url",new StringBody("testURL",ContentType.TEXT_PLAIN))
+                .addPart("package_id",new StringBody(package_id,ContentType.TEXT_PLAIN))
+                .addPart("upload",cbFile)
+                .addPart("description",new StringBody(file.getName()+" created on: "+date,ContentType.TEXT_PLAIN))
+                .build();
+
+        postRequest = new HttpPost(HOST+"/api/action/resource_update");
+        postRequest.setEntity(reqEntity);
+        postRequest.setHeader("X-CKAN-API-Key", api_key);
+
+        HttpResponse response = httpclient.execute(postRequest);
+        int statusCode = response.getStatusLine().getStatusCode();
+
+        if(statusCode!=200){
+            log.error("statusCode =!=" +statusCode);
+        }
+        else log.info("Request returns statusCode 200: OK");
+    }
+
+    /**
+     * Function that uploads a file to CKAN through it's API
+     * @param path Local filesystem path of the file to upload
+     */
+    private void uploadFile(String path) throws IOException {
+        File file = new File(path);
+        SimpleDateFormat dateFormatGmt = new SimpleDateFormat("yyyyMMdd_HHmmss");
+        String date=dateFormatGmt.format(new Date());
+
+        HttpPost postRequest;
+        ContentBody cbFile = new FileBody(file, ContentType.TEXT_HTML);
+        HttpEntity reqEntity = MultipartEntityBuilder.create()
+                .addPart("file", cbFile)
+                .addPart("key", new StringBody(file.getName().split("\\.")[0],ContentType.TEXT_PLAIN))
+                .addPart("name", new StringBody(file.getName(),ContentType.TEXT_PLAIN))
+                .addPart("url",new StringBody("testURL",ContentType.TEXT_PLAIN))
+                .addPart("package_id",new StringBody(package_id,ContentType.TEXT_PLAIN))
+                .addPart("upload",cbFile)
+                .addPart("description",new StringBody(file.getName()+" created on: "+date,ContentType.TEXT_PLAIN))
+                .build();
+
+        postRequest = new HttpPost(HOST+"/api/action/resource_create");
+        postRequest.setEntity(reqEntity);
+        postRequest.setHeader("X-CKAN-API-Key", api_key);
+
+        HttpResponse response = httpclient.execute(postRequest);
+        int statusCode = response.getStatusLine().getStatusCode();
+
+        if(statusCode!=200){
+            log.error("statusCode =!=" +statusCode);
+        }
+        else log.info("Request returns statusCode 200: OK");
+    }
+
     public void close()
     {
-        httpclient.getConnectionManager().shutdown();
+        //httpclient.getConnectionManager().shutdown();
+        try {
+            httpclient.close();
+        } catch (IOException e) {
+            log.error(e);
+        }
     }
 }
