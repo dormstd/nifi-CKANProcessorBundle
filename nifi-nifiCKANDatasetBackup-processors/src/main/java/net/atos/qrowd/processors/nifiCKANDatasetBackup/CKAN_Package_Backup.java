@@ -162,11 +162,9 @@ public class CKAN_Package_Backup extends AbstractProcessor {
                         ckan_api_handler.uploadFilePojo(res, datasetName, resourceFileName);
                     }
                 }
-
                 //Transfer the input file through succes relationship
                 session.transfer(flowFile, REL_BACKUP_CREATED);
                 ckan_api_handler.close();
-
             }else
             {
                 //if not found

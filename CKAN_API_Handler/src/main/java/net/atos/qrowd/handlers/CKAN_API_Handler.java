@@ -546,7 +546,6 @@ public class CKAN_API_Handler {
         else log.info("Request returns statusCode 200: OK");
     }
 
-
     public void close()
     {
         //httpclient.getConnectionManager().shutdown();
