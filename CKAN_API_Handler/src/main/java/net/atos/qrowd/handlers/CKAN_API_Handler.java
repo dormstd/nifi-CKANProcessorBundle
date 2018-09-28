@@ -17,10 +17,7 @@
 package net.atos.qrowd.handlers;
 
 import com.google.gson.Gson;
-import net.atos.qrowd.pojos.CkanFullList;
-import net.atos.qrowd.pojos.Package_;
-import net.atos.qrowd.pojos.Resource;
-import net.atos.qrowd.pojos.ResourceResponse;
+import net.atos.qrowd.pojos.*;
 import org.apache.commons.io.FileUtils;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
@@ -217,7 +214,6 @@ public class CKAN_API_Handler {
             sb.append(line);
             sb.append("\n");
         }
-        //ToDo: Save the returned package to store it's alfanumerical id (to be later used when updating the file)
         if(statusCode!=200){
             log.error("statusCode =!=" +statusCode);
             log.error("Error creating the package via CKAN API. Package id: "+package_id);
@@ -417,6 +413,18 @@ public class CKAN_API_Handler {
         //Parse the response into a POJO to be able to get results from it.
         ResourceResponse resResponse = gson.fromJson(sb.toString(),ResourceResponse.class);
         System.out.println(resResponse);
+
+        String resource_packageId = resResponse.getResult().getResults().get(0).getPackageId();
+        String id = resResponse.getResult().getResults().get(0).getId();
+
+        //This is needed to check that the resource belongs to the current package
+        Package_ foundPackage = getPackageByName(package_id);
+        String foundPackageId = "Not_found";
+        if(foundPackage!=null)
+        {
+            foundPackageId = foundPackage.getId();
+        }
+
         //Now we need to check if the count of results is 1 (otherwise error)
         //if the count is 0, call uploadFile to create the file
         if(resResponse.getResult().getCount()==0)
@@ -427,34 +435,49 @@ public class CKAN_API_Handler {
             //if the count is 1, get all the needed data to update the resource
         }else if(resResponse.getResult().getCount()==1)
         {
-            String resource_packageId = resResponse.getResult().getResults().get(0).getPackageId();
-            String id = resResponse.getResult().getResults().get(0).getId();
-
-            //This is needed to check that the resource belongs to the current package
-            Package_ foundPackage = getPackageByName(package_id);
-            String foundPackageId = "Not_found";
-            if(foundPackage!=null)
-            {
-                foundPackageId = foundPackage.getId();
-            }
-
             //If the resource's package_id is the same as the current package id (search for package by name and get the id)
             if( foundPackage != null && resource_packageId.equals(foundPackageId)) {
-                log.info("Resource found, updating it");
+                log.info("Resource found in the current package, updating it");
                 updateFile(path, id);
                 return true;
             }else{
                 //If no package is found(cannot happen because the resource must belong to a package) or the package is different than the current one
-                log.warn("The found resource does not belong to the same package we are expecting");
-                log.warn("Package id found:"+foundPackageId+". Package expected:"+resource_packageId);
-                log.warn("Creating the resource in the found package");
+                log.warn("The found resource does not belong to the current package");
+                log.warn("Current package id found:"+foundPackageId+". Package expected:"+resource_packageId);
+                log.warn("Creating the resource in the current package");
                 uploadFile(path);
                 return true;
             }
         }else{
-            //ToDo: If more than one resource is found with that name, check if there is one in the current package and update it.
-            log.error("Found more than one resource with that name. Cancel update...");
-            return false;
+            // Iterate over all the resources, checking if any of them belongs to the current package
+            // If any belongs, update it
+            // If none belongs, create the resource in the current package
+
+            boolean isPackageFound = false;
+            for(Result_ result: resResponse.getResult().getResults())
+            {
+                resource_packageId = result.getPackageId();
+                id = result.getId();
+                //This is needed to check that the resource belongs to the current package
+                foundPackage = getPackageByName(package_id);
+                foundPackageId = "Not_found";
+                if(foundPackage!=null)
+                {
+                    foundPackageId = foundPackage.getId();
+                }
+                if( foundPackage != null && resource_packageId.equals(foundPackageId)) {
+                    log.info("Resource found in the current package, updating it");
+                    updateFile(path, id);
+                    isPackageFound = true;
+                }
+            }
+            if(!isPackageFound)
+            {
+                log.warn("None of the found resources belongs to the current package");
+                log.warn("Creating the resource in the current package");
+                uploadFile(path);
+            }
+            return true;
         }
     }
 
