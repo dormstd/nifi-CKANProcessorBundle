@@ -202,10 +202,11 @@ public class CKAN_Flowfile_Uploader extends AbstractProcessor {
             if (!ckan_api_handler.organizationExists()) {
                 ckan_api_handler.createOrganization();
             }
-            if (!ckan_api_handler.packageExists()) {
-                ckan_api_handler.createPackage();
+            if (!ckan_api_handler.packageExists(filenameNoExtension)) {
+                ckan_api_handler.createPackage(filenameNoExtension);
             }
-            if(ckan_api_handler.createOrUpdateResource(file.toAbsolutePath().toString())) {
+            if(ckan_api_handler.createOrUpdateResource(file.toFile().toString())) {
+                getLogger().info("File tried to be uploaded to CKAN: {}", new Object[]{file.toFile().toString()});
                 session.transfer(flowFile, REL_SUCCESS);
                 ckan_api_handler.close();
             }else
@@ -216,9 +217,9 @@ public class CKAN_Flowfile_Uploader extends AbstractProcessor {
         {
             getLogger().log(LogLevel.ERROR, "Error while uploading file {} to CKAN {}: Organization {}.",
                     new Object[]{file, url, organizationId });
+            getLogger().error(ioe.toString());
             session.transfer(session.penalize(flowFile), REL_FAILURE);
         }
-
 
 
         // It is critical that we commit the session before we perform the Delete. Otherwise, we could have a case where we
