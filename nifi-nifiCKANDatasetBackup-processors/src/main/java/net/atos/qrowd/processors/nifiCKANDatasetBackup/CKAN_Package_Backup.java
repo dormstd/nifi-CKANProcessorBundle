@@ -113,7 +113,7 @@ public class CKAN_Package_Backup extends AbstractProcessor {
 
         //Get the filename from the attributes, split by . and get the first part to remove the file extension
         //ToDo: Handle errors...
-        String filename = flowFile.getAttribute(CoreAttributes.FILENAME.key()).split("\\.")[0];
+        String filename = flowFile.getAttribute(CoreAttributes.FILENAME.key()).split("\\.")[0].replaceAll("_","-");
 
         String url = context.getProperty(CKAN_url).getValue();
         final String apiKey = context.getProperty(api_key).getValue();
