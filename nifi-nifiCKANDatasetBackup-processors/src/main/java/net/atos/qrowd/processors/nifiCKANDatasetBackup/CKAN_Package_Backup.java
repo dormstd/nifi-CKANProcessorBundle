@@ -26,8 +26,8 @@ import org.apache.nifi.annotation.behavior.SupportsBatching;
 import org.apache.nifi.annotation.documentation.CapabilityDescription;
 import org.apache.nifi.annotation.documentation.Tags;
 import org.apache.nifi.components.PropertyDescriptor;
+import org.apache.nifi.components.Validator;
 import org.apache.nifi.flowfile.FlowFile;
-import org.apache.nifi.flowfile.attributes.CoreAttributes;
 import org.apache.nifi.logging.LogLevel;
 import org.apache.nifi.processor.*;
 import org.apache.nifi.processor.exception.ProcessException;
@@ -60,6 +60,13 @@ public class CKAN_Package_Backup extends AbstractProcessor {
             .required(true)
             .sensitive(true)
             .build();
+    private static final PropertyDescriptor package_name = new PropertyDescriptor
+            .Builder().name("package_name")
+            .displayName("Name of the package to backup")
+            .description("Name of the package to be backed up")
+            .addValidator(Validator.VALID)
+            .required(true)
+            .build();
 
     private static final Relationship REL_BACKUP_CREATED = new Relationship.Builder()
             .name("BACKUP_SUCCESS")
@@ -84,6 +91,7 @@ public class CKAN_Package_Backup extends AbstractProcessor {
         final List<PropertyDescriptor> descriptors = new ArrayList<>();
         descriptors.add(CKAN_url);
         descriptors.add(api_key);
+        descriptors.add(package_name);
 
         this.descriptors = Collections.unmodifiableList(descriptors);
 
@@ -111,9 +119,8 @@ public class CKAN_Package_Backup extends AbstractProcessor {
             return;
         }
 
-        //Get the filename from the attributes, split by . and get the first part to remove the file extension
-        //ToDo: Handle errors...
-        String filename = flowFile.getAttribute(CoreAttributes.FILENAME.key()).split("\\.")[0].replaceAll("_","-");
+        //Get the package name to be backed up from the properties
+        String packageName = context.getProperty(package_name).getValue();
 
         String url = context.getProperty(CKAN_url).getValue();
         final String apiKey = context.getProperty(api_key).getValue();
@@ -130,8 +137,8 @@ public class CKAN_Package_Backup extends AbstractProcessor {
 
         CKAN_API_Handler ckan_api_handler = new CKAN_API_Handler(url, apiKey);
         try{
-            getLogger().info("Getting the information of package with name: {}",new Object[]{filename});
-            Package_ dataset = ckan_api_handler.getPackageByName(filename);
+            getLogger().info("Getting the information of package with name: {}",new Object[]{packageName});
+            Package_ dataset = ckan_api_handler.getPackageByName(packageName);
             //When package cannot be found on CKAN, returns null
             if(dataset!=null)
             {
