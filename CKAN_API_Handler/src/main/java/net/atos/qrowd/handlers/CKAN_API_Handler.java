@@ -103,43 +103,6 @@ public class CKAN_API_Handler {
             return false;
         }
     }
-    /*public boolean packageExists(String id) throws IOException{
-
-        String line;
-        StringBuilder sb = new StringBuilder();
-        HttpPost postRequest;
-
-        HttpEntity reqEntity = MultipartEntityBuilder.create()
-                .addPart("id",new StringBody(id,ContentType.TEXT_PLAIN))
-                .build();
-
-        postRequest = new HttpPost(HOST+"/api/action/package_show");
-        postRequest.setEntity(reqEntity);
-        postRequest.setHeader("X-CKAN-API-Key", api_key);
-
-        HttpResponse response = httpclient.execute(postRequest);
-        int statusCode = response.getStatusLine().getStatusCode();
-
-        BufferedReader br = new BufferedReader(
-                new InputStreamReader((response.getEntity().getContent())));
-        while ((line = br.readLine()) != null) {
-            sb.append(line);
-            sb.append("\n");
-        }
-
-        if(statusCode==200)
-        {
-            log.info("Package with id "+id+" exists");
-            //Check if that package is deleted
-
-            log.info(sb);
-            return true;
-        }else{
-            log.warn("Package with id "+id+" not found");
-            log.warn(sb);
-            return false;
-        }
-    }*/
 
     public Package_ getPackageByName(String name) throws IOException {
         HttpPost postRequest;
@@ -493,23 +456,16 @@ public class CKAN_API_Handler {
 
     private void updateFile(String path, String resourceId) throws IOException {
         File file = new File(path);
-        SimpleDateFormat dateFormatGmt = new SimpleDateFormat("yyyyMMdd_HHmmss");
-        String date=dateFormatGmt.format(new Date());
 
         HttpPost postRequest;
         ContentBody cbFile = new FileBody(file, ContentType.TEXT_HTML);
         HttpEntity reqEntity = MultipartEntityBuilder.create()
                 .addPart("id",new StringBody(resourceId,ContentType.TEXT_PLAIN))
                 .addPart("file", cbFile)
-                .addPart("key", new StringBody(file.getName().split("\\.")[0],ContentType.TEXT_PLAIN))
-                .addPart("name", new StringBody(file.getName(),ContentType.TEXT_PLAIN))
-                .addPart("url",new StringBody("testURL",ContentType.TEXT_PLAIN))
-                .addPart("package_id",new StringBody(package_id,ContentType.TEXT_PLAIN))
                 .addPart("upload",cbFile)
-                .addPart("description",new StringBody(file.getName()+" created on: "+date,ContentType.TEXT_PLAIN))
                 .build();
 
-        postRequest = new HttpPost(HOST+"/api/action/resource_update");
+        postRequest = new HttpPost(HOST+"/api/action/resource_patch");
         postRequest.setEntity(reqEntity);
         postRequest.setHeader("X-CKAN-API-Key", api_key);
 
