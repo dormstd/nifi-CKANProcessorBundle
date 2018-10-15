@@ -169,7 +169,7 @@ public class CKAN_Package_Backup extends AbstractProcessor {
                         ckan_api_handler.uploadFilePojo(res, datasetName, resourceFileName);
                     }
                 }
-                //Transfer the input file through succes relationship
+                //Transfer the input file through success relationship
                 session.transfer(flowFile, REL_BACKUP_CREATED);
                 ckan_api_handler.close();
             }else
@@ -187,8 +187,10 @@ public class CKAN_Package_Backup extends AbstractProcessor {
             getLogger().log(LogLevel.ERROR, "Error while splitting the resource filename, it contains no '.'");
             getLogger().error(oob.toString());
             session.transfer(session.penalize(flowFile), REL_FAILURE);
+        }finally {
+            // As long as we commit the session right here, we are safe.
+            session.commit();
+            getLogger().info("Processor finished completely");
         }
-        // As long as we commit the session right here, we are safe.
-        session.commit();
     }
 }

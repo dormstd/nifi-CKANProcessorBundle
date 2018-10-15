@@ -20,7 +20,7 @@ import com.google.gson.Gson;
 import net.atos.qrowd.pojos.*;
 import org.apache.commons.io.FileUtils;
 import org.apache.http.HttpEntity;
-import org.apache.http.HttpResponse;
+import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.mime.MultipartEntityBuilder;
@@ -28,7 +28,7 @@ import org.apache.http.entity.mime.content.ContentBody;
 import org.apache.http.entity.mime.content.FileBody;
 import org.apache.http.entity.mime.content.StringBody;
 import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.HttpClientBuilder;
+import org.apache.http.impl.client.HttpClients;
 import org.apache.log4j.Logger;
 
 import java.io.BufferedReader;
@@ -58,7 +58,7 @@ public class CKAN_API_Handler {
         this.organization_id = organization_id.toLowerCase();
         this.package_private = package_private;
 
-        this.httpclient = HttpClientBuilder.create().build();
+        this.httpclient = HttpClients.createDefault();
     }
 
     public CKAN_API_Handler(String HOST, String api_key)
@@ -66,7 +66,7 @@ public class CKAN_API_Handler {
         this.HOST = HOST;
         this.api_key = api_key;
 
-        this.httpclient = HttpClientBuilder.create().build();
+        this.httpclient = HttpClients.createDefault();
     }
 
     public boolean packageExists(String package_id) throws IOException{
@@ -79,13 +79,16 @@ public class CKAN_API_Handler {
         postRequest = new HttpPost(HOST+"/api/3/action/package_search?q=name:"+package_id);
         postRequest.setHeader("X-CKAN-API-Key", api_key);
 
-        HttpResponse response = httpclient.execute(postRequest);
+        CloseableHttpClient httpclient = HttpClients.createDefault();
+        CloseableHttpResponse response = httpclient.execute(postRequest);
         int statusCode = response.getStatusLine().getStatusCode();
         BufferedReader br = new BufferedReader(
                 new InputStreamReader((response.getEntity().getContent())));
         while ((line = br.readLine()) != null) {
             sb.append(line);
         }
+        httpclient.close();
+        response.close();
         // Parse the response into a POJO to be able to get results from it.
         // ToDo: If no result is returned, raise an error (when converting to POJO fails or return code !=200?)
         if(statusCode==200) {
@@ -115,13 +118,16 @@ public class CKAN_API_Handler {
         postRequest = new HttpPost(HOST+"/api/3/action/package_search?q=name:"+name);
         postRequest.setHeader("X-CKAN-API-Key", api_key);
 
-        HttpResponse response = httpclient.execute(postRequest);
+        CloseableHttpClient httpclient = HttpClients.createDefault();
+        CloseableHttpResponse response = httpclient.execute(postRequest);
         int statusCode = response.getStatusLine().getStatusCode();
         BufferedReader br = new BufferedReader(
                 new InputStreamReader((response.getEntity().getContent())));
         while ((line = br.readLine()) != null) {
             sb.append(line);
         }
+        httpclient.close();
+        response.close();
         // Parse the response into a POJO to be able to get results from it.
         // ToDo: If no result is returned, raise an error (when converting to POJO fails or return code !=200?)
         if(statusCode==200) {
@@ -158,7 +164,8 @@ public class CKAN_API_Handler {
         postRequest.setEntity(reqEntity);
         postRequest.setHeader("X-CKAN-API-Key", api_key);
 
-        HttpResponse response = httpclient.execute(postRequest);
+        CloseableHttpClient httpclient = HttpClients.createDefault();
+        CloseableHttpResponse response = httpclient.execute(postRequest);
         int statusCode = response.getStatusLine().getStatusCode();
 
         BufferedReader br = new BufferedReader(
@@ -169,6 +176,9 @@ public class CKAN_API_Handler {
             sb.append(line);
             sb.append("\n");
         }
+        httpclient.close();
+        response.close();
+
         if(statusCode!=200){
             log.error("statusCode =!=" +statusCode);
             log.error("Error creating the package via CKAN API. Package id: "+package_id);
@@ -222,7 +232,8 @@ public class CKAN_API_Handler {
         postRequest.setEntity(reqEntity);
         postRequest.setHeader("X-CKAN-API-Key", api_key);
 
-        HttpResponse response = httpclient.execute(postRequest);
+        CloseableHttpClient httpclient = HttpClients.createDefault();
+        CloseableHttpResponse response = httpclient.execute(postRequest);
         int statusCode = response.getStatusLine().getStatusCode();
 
         BufferedReader br = new BufferedReader(
@@ -233,6 +244,9 @@ public class CKAN_API_Handler {
             sb.append(line);
             sb.append("\n");
         }
+        httpclient.close();
+        response.close();
+
         if(statusCode!=200){
             log.error("statusCode =!=" +statusCode);
             log.error(sb);
@@ -256,7 +270,8 @@ public class CKAN_API_Handler {
         postRequest.setEntity(reqEntity);
         postRequest.setHeader("X-CKAN-API-Key", api_key);
 
-        HttpResponse response = httpclient.execute(postRequest);
+        CloseableHttpClient httpclient = HttpClients.createDefault();
+        CloseableHttpResponse response = httpclient.execute(postRequest);
         int statusCode = response.getStatusLine().getStatusCode();
 
         BufferedReader br = new BufferedReader(
@@ -265,6 +280,8 @@ public class CKAN_API_Handler {
             sb.append(line);
             sb.append("\n");
         }
+        httpclient.close();
+        response.close();
 
         if(statusCode==200)
         {
@@ -294,7 +311,8 @@ public class CKAN_API_Handler {
         postRequest.setEntity(reqEntity);
         postRequest.setHeader("X-CKAN-API-Key", api_key);
 
-        HttpResponse response = httpclient.execute(postRequest);
+        CloseableHttpClient httpclient = HttpClients.createDefault();
+        CloseableHttpResponse response = httpclient.execute(postRequest);
         int statusCode = response.getStatusLine().getStatusCode();
 
         BufferedReader br = new BufferedReader(
@@ -305,6 +323,9 @@ public class CKAN_API_Handler {
             sb.append(line);
             sb.append("\n");
         }
+        httpclient.close();
+        response.close();
+
         if (statusCode != 200) {
             log.error("statusCode =!=" + statusCode);
             log.error(sb);
@@ -323,9 +344,8 @@ public class CKAN_API_Handler {
         file.deleteOnExit();
         FileUtils.copyURLToFile(url, file);
 
-
-        HttpPost postRequest;
         ContentBody cbFile = new FileBody(file, ContentType.TEXT_HTML);
+        HttpPost postRequest;
 
         MultipartEntityBuilder multipart = MultipartEntityBuilder.create()
                 .addPart("file", cbFile)
@@ -333,7 +353,6 @@ public class CKAN_API_Handler {
                 .addPart("name", new StringBody(resourceFileName,ContentType.TEXT_PLAIN))
                 .addPart("package_id",new StringBody(dataset_name,ContentType.TEXT_PLAIN))
                 .addPart("upload",cbFile);
-        //ToDo: Add the rest of the fields¿?
         if(resource.getUrl() != null){
             multipart.addPart("url",new StringBody(resource.getUrl(),ContentType.TEXT_PLAIN));
         }
@@ -350,17 +369,28 @@ public class CKAN_API_Handler {
         }
         HttpEntity reqEntity = multipart.build();
 
-        postRequest = new HttpPost(HOST+"/api/action/resource_create");
+        postRequest = new HttpPost(HOST+"/api/3/action/resource_create");
         postRequest.setEntity(reqEntity);
         postRequest.setHeader("X-CKAN-API-Key", api_key);
 
-        HttpResponse response = httpclient.execute(postRequest);
+        CloseableHttpClient httpclient = HttpClients.createDefault();
+        CloseableHttpResponse response = httpclient.execute(postRequest);
         int statusCode = response.getStatusLine().getStatusCode();
 
+        String line;
+        StringBuilder sb = new StringBuilder();
+        BufferedReader br = new BufferedReader(
+                new InputStreamReader((response.getEntity().getContent())));
+        while ((line = br.readLine()) != null) {
+            sb.append(line);
+        }
         if(statusCode!=200){
             log.error("statusCode =!=" +statusCode);
+            log.error(sb.toString());
         }
         else log.info("Request returns statusCode 200: OK");
+        response.close();
+        httpclient.close();
     }
 
     public Boolean createOrUpdateResource(String path) throws IOException {
@@ -376,12 +406,16 @@ public class CKAN_API_Handler {
         postRequest = new HttpPost(HOST+"/api/action/resource_search?query=name:"+filename);
         postRequest.setHeader("X-CKAN-API-Key", api_key);
 
-        HttpResponse response = httpclient.execute(postRequest);
+        CloseableHttpClient httpclient = HttpClients.createDefault();
+        CloseableHttpResponse response = httpclient.execute(postRequest);
         BufferedReader br = new BufferedReader(
                 new InputStreamReader((response.getEntity().getContent())));
         while ((line = br.readLine()) != null) {
             sb.append(line);
         }
+        httpclient.close();
+        response.close();
+
         //Parse the response into a POJO to be able to get results from it.
         ResourceResponse resResponse = gson.fromJson(sb.toString(),ResourceResponse.class);
         System.out.println(resResponse);
@@ -469,8 +503,11 @@ public class CKAN_API_Handler {
         postRequest.setEntity(reqEntity);
         postRequest.setHeader("X-CKAN-API-Key", api_key);
 
-        HttpResponse response = httpclient.execute(postRequest);
+        CloseableHttpClient httpclient = HttpClients.createDefault();
+        CloseableHttpResponse response = httpclient.execute(postRequest);
         int statusCode = response.getStatusLine().getStatusCode();
+        httpclient.close();
+        response.close();
 
         if(statusCode!=200){
             log.error("statusCode =!=" +statusCode);
@@ -505,7 +542,8 @@ public class CKAN_API_Handler {
         postRequest.setEntity(reqEntity);
         postRequest.setHeader("X-CKAN-API-Key", api_key);
 
-        HttpResponse response = httpclient.execute(postRequest);
+        CloseableHttpClient httpclient = HttpClients.createDefault();
+        CloseableHttpResponse response = httpclient.execute(postRequest);
         int statusCode = response.getStatusLine().getStatusCode();
 
         BufferedReader br = new BufferedReader(
@@ -516,6 +554,8 @@ public class CKAN_API_Handler {
             sb.append(line);
             sb.append("\n");
         }
+        httpclient.close();
+        response.close();
 
         if(statusCode!=200){
             log.error("Error creating a resource: "+ file.getName().split("\\.")[0] +"in package:"+package_id);
@@ -527,7 +567,6 @@ public class CKAN_API_Handler {
 
     public void close()
     {
-        //httpclient.getConnectionManager().shutdown();
         try {
             httpclient.close();
         } catch (IOException e) {
