@@ -62,7 +62,7 @@ public class Package_ {
     private Integer numResources;
     @SerializedName("tags")
     @Expose
-    private List<Object> tags = null;
+    private List<Tag> tags = null;
     @SerializedName("groups")
     @Expose
     private List<Object> groups = null;
@@ -144,7 +144,7 @@ public class Package_ {
      * @param licenseUrl
      * @param relationshipsAsObject
      */
-    public Package_(String licenseTitle, String maintainer, List<Object> relationshipsAsObject, Boolean _private, String maintainerEmail, Integer numTags, String id, String metadataCreated, String metadataModified, String author, String authorEmail, String state, String version, String creatorUserId, String type, List<Resource> resources, Integer numResources, List<Object> tags, List<Object> groups, String licenseId, List<Object> relationshipsAsSubject, Organization organization, String name, Boolean isopen, String url, String notes, String ownerOrg, List<Object> extras, String licenseUrl, String title, String revisionId) {
+    public Package_(String licenseTitle, String maintainer, List<Object> relationshipsAsObject, Boolean _private, String maintainerEmail, Integer numTags, String id, String metadataCreated, String metadataModified, String author, String authorEmail, String state, String version, String creatorUserId, String type, List<Resource> resources, Integer numResources, List<Tag> tags, List<Object> groups, String licenseId, List<Object> relationshipsAsSubject, Organization organization, String name, Boolean isopen, String url, String notes, String ownerOrg, List<Object> extras, String licenseUrl, String title, String revisionId) {
         super();
         this.licenseTitle = licenseTitle;
         this.maintainer = maintainer;
@@ -400,15 +400,15 @@ public class Package_ {
         return this;
     }
 
-    public List<Object> getTags() {
+    public List<Tag> getTags() {
         return tags;
     }
 
-    public void setTags(List<Object> tags) {
+    public void setTags(List<Tag> tags) {
         this.tags = tags;
     }
 
-    public Package_ withTags(List<Object> tags) {
+    public Package_ withTags(List<Tag> tags) {
         this.tags = tags;
         return this;
     }
