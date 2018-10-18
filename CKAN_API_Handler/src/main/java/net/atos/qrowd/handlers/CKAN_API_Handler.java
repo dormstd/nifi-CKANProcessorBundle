@@ -23,6 +23,7 @@ import org.apache.http.HttpEntity;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.ContentType;
+import org.apache.http.entity.StringEntity;
 import org.apache.http.entity.mime.MultipartEntityBuilder;
 import org.apache.http.entity.mime.content.ContentBody;
 import org.apache.http.entity.mime.content.FileBody;
@@ -37,7 +38,25 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.URL;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
+
+/**
+ * Copyright 2018 Atos
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
 public class CKAN_API_Handler {
     private final Logger log = Logger.getLogger(CKAN_API_Handler.class);
@@ -147,18 +166,41 @@ public class CKAN_API_Handler {
 
     }
 
-    public void createPackage(String package_id) throws IOException{
+    public void createPackage(String package_id, String tags) throws IOException{
 
         HttpPost postRequest;
         StringBuilder sb = new StringBuilder();
         String line;
 
-        HttpEntity reqEntity = MultipartEntityBuilder.create()
-                .addPart("name",new StringBody(package_id,ContentType.TEXT_PLAIN))
-                .addPart("owner_org",new StringBody(organization_id,ContentType.TEXT_PLAIN))
-                .addPart("notes",new StringBody(package_description,ContentType.TEXT_PLAIN))
-                .addPart("private",new StringBody(package_private.toString(),ContentType.TEXT_PLAIN))
-                .build();
+        //Split <tags> by "," and for each element in the list generate a tag
+
+        String[] tagList = tags.split(",");
+        List<Tag> list = new ArrayList<>();
+        for(String tag: tagList)
+        {
+            Tag t = new Tag();
+            //Since CKAN only allows alphanumeric and _ we need to deal with illegal characters/spaces...
+            t.setName(tag.replaceAll("[\\W]+","_"));
+            list.add(t);
+        }
+
+        Package_ pack = new Package_();
+        pack.setName(package_id);
+        pack.setOwnerOrg(organization_id);
+        pack.setNotes(package_description);
+        pack.setPrivate(package_private);
+        //Set the new list of tags for the dataset
+
+        if(list.size()==0 || tags.trim().isEmpty()) {
+            pack.setTags(null);
+            pack.setNumTags(0);
+        }else {
+            pack.setTags(list);
+            pack.setNumTags(list.size());
+        }
+        Gson gson = new Gson();
+
+        StringEntity reqEntity = new StringEntity(gson.toJson(pack));
 
         postRequest = new HttpPost(HOST+"/api/3/action/package_create?use_default_schema=true");
         postRequest.setEntity(reqEntity);
@@ -189,44 +231,46 @@ public class CKAN_API_Handler {
             log.info(sb);
         }
     }
-    public void createPackagePojo(Package_ dataset, String name) throws IOException{
+    public void createPackagePojoNoResources(Package_ dataset, String name, String tags) throws IOException{
+
+        //Split <tags> by "," and for each element in the list generate a tag
+
+        String[] tagList = tags.split(",");
+        List<Tag> list = new ArrayList<>();
+        for(String tag: tagList)
+        {
+            Tag t = new Tag();
+            //Since CKAN only allows alphanumeric and _ we need to deal with illegal characters/spaces...
+            t.setName(tag.replaceAll("[\\W]+","_"));
+            list.add(t);
+        }
 
         HttpPost postRequest;
         StringBuilder sb = new StringBuilder();
         String line;
+        //Set the new dataset name and title
+        dataset.setName(name);
+        dataset.setTitle(name);
 
-        MultipartEntityBuilder multipart = MultipartEntityBuilder.create()
-                .addPart("name",new StringBody(name,ContentType.TEXT_PLAIN));
-        // ToDo: Improve this way of handling null values in the returned dataset
-        if(dataset.getAuthor()!=null) {
-            multipart.addPart("author", new StringBody(dataset.getAuthor(), ContentType.TEXT_PLAIN));
-        }
-        if(dataset.getAuthorEmail()!=null) {
-            multipart.addPart("author_email", new StringBody(dataset.getAuthorEmail(), ContentType.TEXT_PLAIN));
-        }
-        if(dataset.getOwnerOrg()!=null) {
-            multipart.addPart("owner_org", new StringBody(dataset.getOwnerOrg(), ContentType.TEXT_PLAIN));
-        }
-        if(dataset.getNotes()!=null) {
-            multipart.addPart("notes", new StringBody(dataset.getNotes(), ContentType.TEXT_PLAIN));
-        }
-        if(dataset.getPrivate()!=null) {
-            multipart.addPart("private", new StringBody(dataset.getPrivate().toString(), ContentType.TEXT_PLAIN));
-        }
-        if(dataset.getLicenseTitle()!=null) {
-            multipart.addPart("license_title", new StringBody(dataset.getLicenseTitle(), ContentType.TEXT_PLAIN));
-        }
-        if(dataset.getLicenseId()!=null) {
-            multipart.addPart("license_id", new StringBody(dataset.getLicenseId(), ContentType.TEXT_PLAIN));
-        }
-        if(dataset.getLicenseTitle() != null){
-            multipart.addPart("license_title", new StringBody(dataset.getLicenseTitle(), ContentType.TEXT_PLAIN));
-        }
-        if(dataset.getMaintainerEmail() != null){
-            multipart.addPart("maintainer_email", new StringBody(dataset.getMaintainerEmail(), ContentType.TEXT_PLAIN));
-        }
+        //Remove identifiers of the old dataset and its resources
+        dataset.setId(null);
+        dataset.setRevisionId(null);
+        dataset.setResources(null);
+        dataset.setNumResources(null);
 
-        HttpEntity reqEntity = multipart.build();
+        //Set the new list of tags for the dataset
+
+        if(list.size()==0 || tags.trim().isEmpty()) {
+            dataset.setTags(null);
+            dataset.setNumTags(0);
+        }else {
+            dataset.setTags(list);
+            dataset.setNumTags(list.size());
+        }
+        Gson gson = new Gson();
+
+        System.out.println(gson.toJson(dataset));
+        StringEntity reqEntity = new StringEntity(gson.toJson(dataset));
 
         postRequest = new HttpPost(HOST+"/api/action/package_create");
         postRequest.setEntity(reqEntity);
@@ -249,6 +293,7 @@ public class CKAN_API_Handler {
 
         if(statusCode!=200){
             log.error("statusCode =!=" +statusCode);
+
             log.error(sb);
         }
         else {

@@ -38,6 +38,22 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 
+/**
+ * Copyright 2018 Atos
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 @EventDriven
 @SupportsBatching
 @Tags({"ckan","backup","web service","request","local"})
@@ -67,6 +83,13 @@ public class CKAN_Package_Backup extends AbstractProcessor {
             .addValidator(Validator.VALID)
             .required(true)
             .build();
+    private static final PropertyDescriptor tag_list = new PropertyDescriptor
+            .Builder().name("tag_list")
+            .displayName("Comma-separated Tag List")
+            .description("Comma-separated tag list to be set for the dataset. Only alphanumeric characters and '_' accepted")
+            .addValidator(Validator.VALID)
+            .required(false)
+            .build();
 
     private static final Relationship REL_BACKUP_CREATED = new Relationship.Builder()
             .name("BACKUP_SUCCESS")
@@ -92,6 +115,7 @@ public class CKAN_Package_Backup extends AbstractProcessor {
         descriptors.add(CKAN_url);
         descriptors.add(api_key);
         descriptors.add(package_name);
+        descriptors.add(tag_list);
 
         this.descriptors = Collections.unmodifiableList(descriptors);
 
@@ -125,6 +149,8 @@ public class CKAN_Package_Backup extends AbstractProcessor {
         String url = context.getProperty(CKAN_url).getValue();
         final String apiKey = context.getProperty(api_key).getValue();
 
+        String tagList = context.getProperty(tag_list).getValue();
+
         /* *****************
          * Main logic of the CKAN package backup:
          *  - Look in CKAN for a package with the same name as the file
@@ -154,7 +180,7 @@ public class CKAN_Package_Backup extends AbstractProcessor {
 
                 getLogger().info("Creating the package: {}", new Object[]{datasetName});
                 //Create the new timestamped package
-                ckan_api_handler.createPackagePojo(dataset,datasetName);
+                ckan_api_handler.createPackagePojoNoResources(dataset,datasetName,tagList);
 
                 //Check when the list of resources of the package is empty
                 if(resourceList.size()>0) {

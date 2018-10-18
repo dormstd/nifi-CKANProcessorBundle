@@ -37,6 +37,22 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
 
+/**
+ * Copyright 2018 Atos
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 @Tags({"ckan","web service","request","local"})
 @CapabilityDescription("Nifi Processor that will upload the specified flowfile to CKAN through its API, it will create the organization and package if needed.")
 @ReadsAttributes
@@ -94,6 +110,13 @@ public class CKAN_Flowfile_Uploader extends AbstractProcessor {
             .defaultValue(PRIVATE_TRUE.getValue())
             .required(true)
             .build();
+    private static final PropertyDescriptor tag_list = new PropertyDescriptor
+            .Builder().name("tag_list")
+            .displayName("Comma-separated Tag List")
+            .description("Comma-separated tag list to be set for the dataset. Only alphanumeric characters and '_' accepted")
+            .addValidator(Validator.VALID)
+            .required(false)
+            .build();
 
     private static final Relationship REL_SUCCESS = new Relationship.Builder()
             .name("SUCCESS")
@@ -118,6 +141,7 @@ public class CKAN_Flowfile_Uploader extends AbstractProcessor {
         descriptors.add(package_name);
         descriptors.add(package_description);
         descriptors.add(package_private);
+        descriptors.add(tag_list);
 
         this.descriptors = Collections.unmodifiableList(descriptors);
 
@@ -147,6 +171,8 @@ public class CKAN_Flowfile_Uploader extends AbstractProcessor {
         }
         //This is the way to get the value of a property
         String url = context.getProperty(CKAN_url).getValue();
+
+        String tagList = context.getProperty(tag_list).getValue();
 
         String filename = flowFile.getAttribute(CoreAttributes.FILENAME.key());
 
@@ -203,7 +229,7 @@ public class CKAN_Flowfile_Uploader extends AbstractProcessor {
                 ckan_api_handler.createOrganization();
             }
             if (!ckan_api_handler.packageExists(filenameNoExtension)) {
-                ckan_api_handler.createPackage(filenameNoExtension);
+                ckan_api_handler.createPackage(filenameNoExtension,tagList);
             }
             if(ckan_api_handler.createOrUpdateResource(file.toFile().toString())) {
                 getLogger().info("File tried to be uploaded to CKAN: {}", new Object[]{file.toFile().toString()});
