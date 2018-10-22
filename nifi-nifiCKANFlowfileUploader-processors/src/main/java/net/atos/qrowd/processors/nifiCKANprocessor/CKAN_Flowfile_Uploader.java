@@ -245,12 +245,12 @@ public class CKAN_Flowfile_Uploader extends AbstractProcessor {
                     new Object[]{file, url, organizationId });
             getLogger().error(ioe.toString());
             session.transfer(session.penalize(flowFile), REL_FAILURE);
+        }catch(Exception e)
+        {
+            getLogger().error("Unexpected error");
+            getLogger().error(e.toString());
+            session.transfer(session.penalize(flowFile), REL_FAILURE);
         }
-
-
-        // It is critical that we commit the session before we perform the Delete. Otherwise, we could have a case where we
-        // ingest the file, delete it, and then NiFi is restarted before the session is committed. That would result in data loss.
-        // As long as we commit the session right here, we are safe.
         session.commit();
     }
 

@@ -204,6 +204,8 @@ public class CKAN_Package_Backup extends AbstractProcessor {
                 session.transfer(flowFile, REL_NO_PACKAGE);
                 ckan_api_handler.close();
             }
+            session.commit();
+            getLogger().info("Processor finished completely");
         }catch(IOException ioe) {
             getLogger().log(LogLevel.ERROR, "Error while using the CKAN API");
             getLogger().error(ioe.toString());
@@ -213,10 +215,12 @@ public class CKAN_Package_Backup extends AbstractProcessor {
             getLogger().log(LogLevel.ERROR, "Error while splitting the resource filename, it contains no '.'");
             getLogger().error(oob.toString());
             session.transfer(session.penalize(flowFile), REL_FAILURE);
-        }finally {
-            // As long as we commit the session right here, we are safe.
-            session.commit();
-            getLogger().info("Processor finished completely");
+        }catch(Exception e)
+        {
+            getLogger().error("Unexpected error");
+            getLogger().error(e.toString());
+            session.transfer(session.penalize(flowFile), REL_FAILURE);
         }
+        session.commit();
     }
 }
