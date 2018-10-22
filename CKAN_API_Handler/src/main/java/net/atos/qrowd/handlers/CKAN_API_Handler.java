@@ -173,7 +173,10 @@ public class CKAN_API_Handler {
         String line;
 
         //Split <tags> by "," and for each element in the list generate a tag
-
+        if(tags==null)
+        {
+            tags="";
+        }
         String[] tagList = tags.split(",");
         List<Tag> list = new ArrayList<>();
         for(String tag: tagList)
@@ -234,7 +237,10 @@ public class CKAN_API_Handler {
     public void createPackagePojoNoResources(Package_ dataset, String name, String tags) throws IOException{
 
         //Split <tags> by "," and for each element in the list generate a tag
-
+        if(tags==null)
+        {
+            tags="";
+        }
         String[] tagList = tags.split(",");
         List<Tag> list = new ArrayList<>();
         for(String tag: tagList)
