@@ -12,3 +12,5 @@ mvn clean package
 
 Then we can deploy the generated .nar package that can be found in the `nar` folders
 into the libraries folder of the Apache Nifi instance.
+
+Developed within the [QROWD](http://qrowd-project.eu/) H2020 EU project

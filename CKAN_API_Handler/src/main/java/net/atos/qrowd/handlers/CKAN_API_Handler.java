@@ -430,7 +430,7 @@ public class CKAN_API_Handler {
 
     public Boolean createOrUpdateResource(String path) throws IOException {
         File file = new File(path);
-        String filename = file.getName();
+        String filename = file.getName().replaceAll("[\\W]+","_");
         HttpPost postRequest;
         StringBuilder sb = new StringBuilder();
         String line;

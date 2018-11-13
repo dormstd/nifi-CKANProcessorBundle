@@ -17,3 +17,5 @@ The processor has 2 properties to be filled before running:
 
 * **CKAN_url**: Url of the CKAN instance to write to
 * **api_key**: Personal API-Key provided by CKAN
+
+Developed within the [QROWD](http://qrowd-project.eu/) H2020 EU project
