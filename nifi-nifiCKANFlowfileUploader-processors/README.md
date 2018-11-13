@@ -19,3 +19,5 @@ The processor has 6 properties to be filled before running:
 * **package_name**: *(optional)* Name for the creating of the package. When empty, the filename attribute of the flowfile will be used.
 * **package_description**: *(optional)* Description of the package
 * **package_visibility**: *(optional)* Choose the visibility of the package between private or public
+
+Developed within the [QROWD](http://qrowd-project.eu/) H2020 EU project
