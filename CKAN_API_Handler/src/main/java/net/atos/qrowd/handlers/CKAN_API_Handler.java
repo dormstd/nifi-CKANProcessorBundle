@@ -167,7 +167,7 @@ public class CKAN_API_Handler {
         {
             Tag t = new Tag();
             //Since CKAN only allows alphanumeric and _ we need to deal with illegal characters/spaces...
-            t.setName(tag.replaceAll("[\\W]+","_"));
+            t.setName(tag.replaceAll("[^\\.a-zA-Z0-9]+","_"));
             list.add(t);
         }
 
@@ -231,7 +231,7 @@ public class CKAN_API_Handler {
         {
             Tag t = new Tag();
             //Since CKAN only allows alphanumeric and _ we need to deal with illegal characters/spaces...
-            t.setName(tag.replaceAll("[\\W]+","_"));
+            t.setName(tag.replaceAll("[^\\.a-zA-Z0-9]+","_"));
             list.add(t);
         }
 
@@ -430,7 +430,7 @@ public class CKAN_API_Handler {
 
     public Boolean createOrUpdateResource(String path) throws IOException {
         File file = new File(path);
-        String filename = file.getName().replaceAll("[\\W]+","_");
+        String filename = file.getName().replaceAll("[^\\.a-zA-Z0-9]+","_");
         HttpPost postRequest;
         StringBuilder sb = new StringBuilder();
         String line;
