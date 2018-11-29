@@ -72,6 +72,12 @@ public class CKAN_API_Handler {
         this.httpclient = HttpClients.createDefault();
     }
 
+    /**
+     * Call the CKAN API to check if the dataset with the name passed as argument exists in the CKAN instance
+     * @param package_id The name of the package to check the existence of
+     * @return boolean -> true if found, false in other case
+     * @throws IOException Exception parsing the result message or closing the connection
+     */
     public boolean packageExists(String package_id) throws IOException{
 
         String line;
@@ -110,6 +116,12 @@ public class CKAN_API_Handler {
         }
     }
 
+    /**
+     * Method to get a complete dataset with all its resources from the CKAN API
+     * @param name The name of the package to check the existence of
+     * @return Package_ class with the requested data if it exists, null if not found
+     * @throws IOException Exception parsing the result message or closing the connection
+     */
     public Package_ getPackageByName(String name) throws IOException {
         HttpPost postRequest;
         StringBuilder sb = new StringBuilder();
@@ -150,6 +162,12 @@ public class CKAN_API_Handler {
 
     }
 
+    /**
+     * Method to create an empty dataset  using the CKAN API
+     * @param package_id Name of the package to be created
+     * @param tags Comma-separated String of tags to add to the dataset
+     * @throws IOException Exception parsing the result message or closing the connection
+     */
     public void createPackage(String package_id, String tags) throws IOException{
 
         HttpPost postRequest;
@@ -167,7 +185,7 @@ public class CKAN_API_Handler {
         {
             Tag t = new Tag();
             //Since CKAN only allows alphanumeric and _ we need to deal with illegal characters/spaces...
-            t.setName(tag.replaceAll("[\\W]+","_"));
+            t.setName(tag.replaceAll("[^\\.a-zA-Z0-9]+","_"));
             list.add(t);
         }
 
@@ -231,7 +249,7 @@ public class CKAN_API_Handler {
         {
             Tag t = new Tag();
             //Since CKAN only allows alphanumeric and _ we need to deal with illegal characters/spaces...
-            t.setName(tag.replaceAll("[\\W]+","_"));
+            t.setName(tag.replaceAll("[^\\.a-zA-Z0-9]+","_"));
             list.add(t);
         }
 
@@ -292,6 +310,11 @@ public class CKAN_API_Handler {
         }
     }
 
+    /**
+     * Method that checks if the organization with organization_id stored in the object variable exists or not
+     * @return boolean-> true if exists, false otherwise
+     * @throws IOException Exception parsing the result message or closing the connection
+     */
     public boolean organizationExists() throws IOException{
         String line;
         StringBuilder sb = new StringBuilder();
@@ -330,6 +353,10 @@ public class CKAN_API_Handler {
         }
     }
 
+    /**
+     * Method to create a new organization with the organization_id stored in the object
+     * @throws IOException Exception parsing the result message or closing the connection
+     */
     public void createOrganization() throws IOException{
 
         HttpPost postRequest;
@@ -370,6 +397,13 @@ public class CKAN_API_Handler {
         }
     }
 
+    /**
+     * Method to upload a resource previously created with the new id specified in resourceFileName, to a dataset with id dataset_name
+     * @param resource Resource previously created or gotten from the API
+     * @param dataset_name Id of the dataset to upload the resource to
+     * @param resourceFileName New name of the resource
+     * @throws IOException Exception parsing the result message, getting the file in the resource or closing the connection
+     */
     public void uploadFilePojo(Resource resource, String dataset_name, String resourceFileName) throws IOException {
 
         URL url = new URL(resource.getUrl());
@@ -430,7 +464,7 @@ public class CKAN_API_Handler {
 
     public Boolean createOrUpdateResource(String path) throws IOException {
         File file = new File(path);
-        String filename = file.getName().replaceAll("[\\W]+","_");
+        String filename = file.getName().replaceAll("[^\\.a-zA-Z0-9]+","_");
         HttpPost postRequest;
         StringBuilder sb = new StringBuilder();
         String line;
@@ -523,6 +557,12 @@ public class CKAN_API_Handler {
         }
     }
 
+    /**
+     * Update the file stored in the resource with id resourceId
+     * @param path Local path of the file to upload to the resource
+     * @param resourceId Id of the resource to upload the file to
+     * @throws IOException Exception parsing the result message or closing the connection
+     */
     private void updateFile(String path, String resourceId) throws IOException {
         File file = new File(path);
 
@@ -553,6 +593,7 @@ public class CKAN_API_Handler {
     /**
      * Function that uploads a file to CKAN through it's API
      * @param path Local filesystem path of the file to upload
+     * @throws IOException Exception parsing the result message or closing the connection
      */
     private void uploadFile(String path) throws IOException {
         File file = new File(path);
